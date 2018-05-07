@@ -42,19 +42,54 @@ while(1){
 }
 ```
 
-The function names are chosen to represent what they do. As we can see, there is no obvious way to delete items. We can just list them and rename the shop. Lets first look at the `list_items()` function. For the sake of readibility unnecessary information is omitted from all further code listings.
-
+The function names are chosen to represent what they do. And as we can see, there is no obvious way to delete items, thus making a heap based exploit less likely<sup>[citation needed]</sup>. We can just list them and rename the shop.  Of course there is a bit of reversing necessary to come up with those names. First lets get a look at the `add_item()` (formerly known as `sub_400A5B()`) function to gain further knowledge of the layout of single items. 
 
 ```c
-Item* list_items()
+Item* add_item()
 {
-    for (Item* currItem = global_last_item; currItem; currItem = currItem->blink){
-        printf("%s: $".2f - %s\n", currItem->name, currItem->description, currItem->price)
+    char* buffer;
+    if( dword_6021e8 < 32 )
+    {
+        item_ptr = malloc(0x130);
+        
+        get_input(item_ptr + 0xC, 32)
+        get_input(item_ptr + 0x2C, 256)
+        get_input(buffer, 10)
+        sscanf(buffer, "%f", item + 0x12C)
+        
+        sub_400986(item_ptr)
+        *(QWORD*)item_ptr = qword_6021F0;
+        qword_6021F0 = item_ptr;
+        ++dword_6021E8;
     }
+    else
+        printf("Too many items.")
+}
+```
+
+There is not much imagination needed to see that `dword_6021E8` holds the number of items added. When cross checking with how items are printed (in `list_items()`), we can see that `item_ptr + 0xC` is holds the name of the item, while `item_ptr + 0x2C` is the description and `item_ptr + 0x12C` stores the associated price. The value of `qword_6021F0` is saved in the newly allocated item at offset 0, and as the next step, the point of the current item is placed back in `qword_6021F0`. This suggests, that the items are stored in a linked list, and `qword_6021F0` holds the last item that was added to this list. But `sub_400986` looks suspicious, lets investigate further.
+
+```c
+sub_400986(Item* item_ptr)
+{
+    // fread from /dev/urandom into random_value
+    for(int i = 0; i < 4; i++){
+        *(BYTE*)(item_ptr+8 + i) = byte_602090[random_value % 0xF];
+    }
+}
+```
+With the buffer at `byte_602090` holding the string `0123456789abcdef` we can see, that four bytes at the offset + 8 are randomly selected from that string. Why that is the case is not clear at this point, but lets build the item definition from what we know so far.
+
+```c
+class Item{
+    Item* blink; // Offset 0x0
+    __int32 unknown; // Offset 0x8
+    char* name; // Offset 0xC
+    char* description; // Offset 0x2C
+    float price; // Offset 0x12C
 }
 ```
 
 
 
 
-I am good <sup>citation needed</sup>
