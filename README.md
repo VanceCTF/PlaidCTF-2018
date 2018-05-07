@@ -42,7 +42,7 @@ while(1){
 }
 ```
 
-The function names are chosen to represent what they do. And as we can see, there is no obvious way to delete items, thus making a heap based exploit less likely<sup>[citation needed]</sup>. We can just list them and rename the shop.  Of course there is a bit of reversing necessary to come up with those names. First lets get a look at the `add_item()` (formerly known as `sub_400A5B()`) function to gain further knowledge of the layout of single items. 
+The function names are chosen to represent what they do. And as we can see, there is no obvious way to delete items, thus making a heap based exploit less likely<sup>[citation needed]</sup>. We can just list them and rename the shop.  Of course there is a bit of reversing necessary to come up with those names. My first guess for a vulnerability was the `get_input()` function, but the input is sanitized properly, so this was a dead end (that i am redacting from this writeup). First lets get a look at the `add_item()` (formerly known as `sub_400A5B()`) function to gain further knowledge of the layout of single items. 
 
 ```c
 Item* add_item()
@@ -90,6 +90,19 @@ class Item{
 }
 ```
 
+With this knowledge, lets keep going with the `rename_shop()` function.
+
+```c
+sub_400D6A()
+{
+    if( !qword_6021E0)
+        qword_6021E0 = malloc(0x130);
+    printf("Enter your shop name:");
+    return get_input(qword_6021E0, 0x130);
+}
+```
+
+`qword_6021E0` seems to be a global variable that is holding the pointer to the allocated buffer for the name of the shop. It is rather suspicious, that the shop name can be maximally 0x130 bytes long, which is exactly the size of one item! But there is no vulnerability to be seen so far.
 
 
 
