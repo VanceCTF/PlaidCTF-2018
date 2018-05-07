@@ -129,13 +129,14 @@ sub_400B78()
 }
 ```
 
-First we are prompted to enter the haystack for `memmem`. If you are not familiar with `memmem`, i suggest you look it up. But this tells us the meaning of the previously unkown value in our Item definition. The four bytes are used as the needle to be found in the haystack. If the needle of the item in question is found in the haystack, it gets added to a global array of items at `qword_6020E0`. Now we recall the fact, that it is possible to add 33 items to our linked list. If we pass all the `memmem` calls, we can write at the position `qword_6020E0 + 0x8 * 0x20` which is the address `qword_6021E0` which looks familiar. It is the address where the pointer for the shop name is stored. So if we are able to pass the haystack checks for all 33 items, we can overwrite the pointer to our shop name, with a valid item. This process is shown by the following listings:
+First we are prompted to enter the haystack for `memmem`. If you are not familiar with `memmem`, i suggest you look it up. But this tells us the meaning of the previously unkown value in our Item definition. The four bytes are used as the needle to be found in the haystack. If the needle of the item in question is found in the haystack, it gets added to a global array of items at `qword_6020E0`. Now we recall the fact, that it is possible to add 33 items to our linked list. The while loop does not check, how many items are already added to the list. If we pass all the `memmem` calls, we can write at the position `qword_6020E0 + 0x8 * 0x20` which is the address `qword_6021E0` which looks familiar. It is the address where the pointer for the shop name is stored. So if we are able to pass the haystack checks for all 33 items, we can overwrite the pointer to our shop name, with a valid item. This process is shown by the following listings:
 
 Before:
 ```
 qword_6020E0 0
 qword_6020E8 0
 ...
+qword_6021D8 0
 qword_6021E0 shop_name_ptr
 ```
 
@@ -144,8 +145,36 @@ After:
 qword_6020E0 item_32_ptr
 qword_6020E8 item_31_ptr
 ...
+qword_6021D8 item_1_ptr
 qword_6021E0 item_0_ptr
 ```
 
-The `rename_shop()` function allows us to write arbitrary values to `item_0_ptr`
+The `rename_shop()` function allows us to write arbitrary values to `item_0_ptr`. We found the vulnerability, but how do we use it effectively? If we modify the blink from the item stored at `qword_6021E0`, we can manually insert an element at the beginning of the list (since they are printed and evaluated in reverse order). But we have to be careful, because the items get traversed with `currItem = currItem->blink` the blink has to point at least to a readable memory area (or NULL to stop traversing the list). It is obvious to leak the address of libc first (because we are surely gonna need it later). Lets look at the PLT:
+
+```
+.got.plt:0000000000602000                 assume cs:_got_plt
+.got.plt:0000000000602000                 ;org 602000h
+.got.plt:0000000000602000                 dq ?
+.got.plt:0000000000602008                 dq ?
+.got.plt:0000000000602010                 dq 0
+.got.plt:0000000000602018 off_602018      dq offset puts        
+.got.plt:0000000000602020 off_602020      dq offset fread       
+.got.plt:0000000000602028 off_602028      dq offset strlen     
+.got.plt:0000000000602030 off_602030      dq offset __stack_chk_fail
+.got.plt:0000000000602038 off_602038      dq offset setbuf        
+.got.plt:0000000000602040 off_602040      dq offset printf        
+.got.plt:0000000000602048 off_602048      dq offset __libc_start_main
+.got.plt:0000000000602050 off_602050      dq offset fgets         
+.got.plt:0000000000602058 off_602058      dq offset memmem        
+.got.plt:0000000000602060 off_602060      dq offset malloc        
+.got.plt:0000000000602068 off_602068      dq offset __isoc99_sscanf
+.got.plt:0000000000602070 off_602070      dq offset fopen         
+.got.plt:0000000000602078 off_602078      dq offset exit          
+.got.plt:0000000000602078 _got_plt        ends
+```
+
+I decided to leak the address of `puts`. This left me two choices for a leak. I could let `puts` leak from the name or description field of the item. I just had to set up the item 0xC or 0x2C above the address of `puts`, respectively. I opted to leak it 
+
+
+
 
