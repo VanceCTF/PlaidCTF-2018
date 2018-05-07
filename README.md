@@ -173,8 +173,30 @@ The `rename_shop()` function allows us to write arbitrary values to `item_0_ptr`
 .got.plt:0000000000602078 _got_plt        ends
 ```
 
-I decided to leak the address of `puts`. This left me two choices for a leak. I could let `puts` leak from the name or description field of the item. I just had to set up the item 0xC or 0x2C above the address of `puts`, respectively. I opted to leak it 
+I decided to leak the address of `fread`. This left me two choices for a leak. I could let `fread` leak from the name or description field of the item. I just had to set up the item 0xC or 0x2C above the address of `fread`, respectively. I opted to leak it with the description field, so i needed my fake to be at `0x601FF4` ( + 0x2C = `0x602020`). This is easily done by renaming the shop so that following changes take effect:
 
+Before:
+```
+item_0:
 
+blink 0x0000000000000000
+needle XXXX
+name "Item_0"
+description "Description_0"
+value 1.0f
+```
+
+After:
+```
+item_0:
+
+blink 0x0000000000601FF4
+needle "1234"
+name "Item_0"
+description "Description_0"
+value 1.0f
+```
+
+As you can see, i wrote the first 12 bytes of the item, so my blink would point to the address selected for the new fake item. In addition to that, i wrote the needle so it would be valid pattern (just to be sure). After that, we can trigger the "l" command, and the last item listed will contain the address of `fread` in the description field. So we got our libc address, success. The next step is to do something with the information that we extracted.
 
 
