@@ -48,7 +48,7 @@ The function names are chosen to represent what they do. And as we can see, ther
 Item* add_item()
 {
     char* buffer;
-    if( dword_6021e8 < 32 )
+    if( dword_6021e8 <= 32 )
     {
         item_ptr = malloc(0x130);
         
@@ -67,7 +67,7 @@ Item* add_item()
 }
 ```
 
-There is not much imagination needed to see that `dword_6021E8` holds the number of items added. When cross checking with how items are printed (in `list_items()`), we can see that `item_ptr + 0xC` is holds the name of the item, while `item_ptr + 0x2C` is the description and `item_ptr + 0x12C` stores the associated price. The value of `qword_6021F0` is saved in the newly allocated item at offset 0, and as the next step, the point of the current item is placed back in `qword_6021F0`. This suggests, that the items are stored in a linked list, and `qword_6021F0` holds the last item that was added to this list. But `sub_400986` looks suspicious, lets investigate further.
+There is not much imagination needed to see that `dword_6021E8` holds the number of items added. When cross checking with how items are printed (in `list_items()`), we can see that `item_ptr + 0xC` is holds the name of the item, while `item_ptr + 0x2C` is the description and `item_ptr + 0x12C` stores the associated price. The value of `qword_6021F0` is saved in the newly allocated item at offset 0, and as the next step, the point of the current item is placed back in `qword_6021F0`. This suggests, that the items are stored in a linked list, and `qword_6021F0` holds the last item that was added to this list. But most importantly, this code listing shows one part of the vulnerability. `dword_6021e8` is checked for being 32 or lower, which means that we are able to add 33 items (classic "off by one")! That in itself is not a problem, but it will be later on.  But `sub_400986` looks suspicious, lets investigate further.
 
 ```c
 sub_400986(Item* item_ptr)
@@ -102,7 +102,32 @@ sub_400D6A()
 }
 ```
 
-`qword_6021E0` seems to be a global variable that is holding the pointer to the allocated buffer for the name of the shop. It is rather suspicious, that the shop name can be maximally 0x130 bytes long, which is exactly the size of one item! But there is no vulnerability to be seen so far.
+`qword_6021E0` seems to be a global variable that is holding the pointer to the allocated buffer for the name of the shop. It is rather suspicious, that the shop name can be maximally 0x130 bytes long, which is exactly the size of one item! Now lets move on to the last function `checkout()`.
+
+```c
+sub_400B78()
+{
+    get_input(&haystack, 0x10004)
+    currItem = qword_6021F0 // remember, this holds the item that was last added to the list!
+    
+    index = 0;
+    
+    while(currItem){
+        if(memmem(&haystack, 0x10004, currItem->unknown, 0x4){
+            qword_6020E0[index++] = currItem; // List of Items starts at qword_6020E0
+        }
+        currItem = currItem->blink;
+    }
+    
+    total = 0.0;
+    printf("%s Checkout in process...\n", qword_6021E0) // shop_name
+    for(int i = 0; i < index; i++){
+        printf("\tBuying %s for $%.2f\n",qword_6020E0[i]->name,qword_6020E0[i]->price) // qword_6020E0 = item_array
+        total += qword_6020E0[i]->price;
+    }
+    printf("TOTAL: $%.2f\n", total);
+}
+```
 
 
 
