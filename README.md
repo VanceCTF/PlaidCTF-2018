@@ -48,9 +48,9 @@ The function names are chosen to represent what they do. As we can see, there is
 ```c
 Item* list_items()
 {
-for (Item* currItem = global_last_item; currItem; currItem = currItem->blink){
-printf("%s: $".2f - %s\n", currItem->name, currItem->description, currItem->price)
-}
+    for (Item* currItem = global_last_item; currItem; currItem = currItem->blink){
+        printf("%s: $".2f - %s\n", currItem->name, currItem->description, currItem->price)
+    }
 }
 ```
 
