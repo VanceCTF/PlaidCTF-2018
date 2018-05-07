@@ -129,5 +129,23 @@ sub_400B78()
 }
 ```
 
+First we are prompted to enter the haystack for `memmem`. If you are not familiar with `memmem`, i suggest you look it up. But this tells us the meaning of the previously unkown value in our Item definition. The four bytes are used as the needle to be found in the haystack. If the needle of the item in question is found in the haystack, it gets added to a global array of items at `qword_6020E0`. Now we recall the fact, that it is possible to add 33 items to our linked list. If we pass all the `memmem` calls, we can write at the position `qword_6020E0 + 0x8 * 0x20` which is the address `qword_6021E0` which looks familiar. It is the address where the pointer for the shop name is stored. So if we are able to pass the haystack checks for all 33 items, we can overwrite the pointer to our shop name, with a valid item. This process is shown by the following listings:
 
+Before:
+```
+qword_6020E0 0
+qword_6020E8 0
+...
+qword_6021E0 shop_name_ptr
+```
+
+After:
+```
+qword_6020E0 item_32_ptr
+qword_6020E8 item_31_ptr
+...
+qword_6021E0 item_0_ptr
+```
+
+The `rename_shop()` function allows us to write arbitrary values to `item_0_ptr`
 
